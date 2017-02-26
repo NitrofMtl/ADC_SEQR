@@ -1,0 +1,8 @@
+Adc_Seqr	KEYWORD1
+ADCHandler	KEYWORD2
+read	KEYWORD2
+prescaler	KEYWORD2
+printSetup	KEYWORD2
+enable	KEYWORD2
+disable	KEYWORD2
+
