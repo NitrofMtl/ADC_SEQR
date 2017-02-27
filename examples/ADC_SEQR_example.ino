@@ -2,7 +2,7 @@
 #include <ADC_SEQR.h>
 
 void setup() {
-  Serial.begin(115200); 
+  Serial.begin(9600); 
   Adc_Seqr::begin(1); //initiate sequencer, have to be before 'analogReadResolution' call to not reset it to 10
   analogReadResolution(12);
   Adc_Seqr::printSetup();
