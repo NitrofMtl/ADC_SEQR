@@ -1,11 +1,11 @@
 #ifndef ADC_SEQR_h
 #define ADC_SEQR_h
 
-#if (ARDUINO >= 100)
-    #include "Arduino.h"
-#else
-    #include "WProgram.h"
-#endif
+#if defined(ARDUINO_ARCH_AVR)
+  	#error "This libraries is for arduino DUE only !!!"
+#elif defined(ARDUINO_ARCH_SAM)
+  // SAM-specific code
+
 
 #include <Streaming.h>
   
@@ -25,4 +25,8 @@ public:
 	static void disable();
 };
 
+#else
+  #error "No SAM3x (arduino DUE) achitechture detected !!!"
+#endif
+	
 #endif
