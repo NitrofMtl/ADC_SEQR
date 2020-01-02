@@ -3,7 +3,7 @@
 
 void setup() {
   Serial.begin(9600); 
-  Adc_Seqr::begin(1); //initiate sequencer, have to be before 'analogReadResolution' call to not reset it to 10
+  Adc_Seqr::begin(); //initiate sequencer, have to be before 'analogReadResolution' call to not reset it to 10
   analogReadResolution(12);
   Adc_Seqr::printSetup();
 }
