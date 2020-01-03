@@ -1,4 +1,3 @@
-#include <Streaming.h>
 #include <ADC_SEQR.h>
 
 void setup() {

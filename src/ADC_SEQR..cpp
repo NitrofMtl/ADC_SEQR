@@ -66,11 +66,11 @@ void Adc_Seqr::begin(){
 }
 
 void Adc_Seqr::printSetup(){
- Serial << "mode register =            " << _HEX(REG_ADC_MR) << endl;
- Serial << "channel enabled register = " << _HEX(REG_ADC_CHSR) << endl;
- Serial << "sequence register1 =       " << _HEX(REG_ADC_SEQR1) << endl;
- Serial << "sequence register2 =       " << _HEX(REG_ADC_SEQR2) << endl;
- Serial << "interrupts =               " << _HEX(REG_ADC_IMR) << endl;
+	Serial.print("mode register =            "); Serial.println(_HEX(REG_ADC_MR));
+	Serial.print("channel enabled register = "); Serial.println(_HEX(REG_ADC_CHSR));
+	Serial.print("sequence register1 =       "); Serial.println(_HEX(REG_ADC_SEQR1));
+	Serial.print("sequence register2 =       "); Serial.println(_HEX(REG_ADC_SEQR2));
+	Serial.print("interrupts =               "); Serial.println(_HEX(REG_ADC_IMR));
 }
 
 uint16_t Adc_Seqr::read(uint8_t pin){
