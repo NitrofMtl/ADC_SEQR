@@ -24,7 +24,7 @@ ADC_SEQR is a rapper of static member variable and function so user could or not
 
 -The user could create an instance if wanted:
 ```
-ADC_SEQR adc_seqr;
+Adc_Seqr adc_seqr;
 ```
 
 If an instance of the library is created, any function could be call with the "." operator. Without, use scope "::" operator:
@@ -33,14 +33,14 @@ If an instance of the library is created, any function could be call with the ".
 adc_seqr.begin();
 
 //without instance
-ADC_SEQR::begin();
+Adc_Seqr::begin();
 ```
 
 ## example:
 
 -First include header:
 ```
-#include <ADC_SEQR.h>#include <ADC_SEQR.h>
+#include <ADC_SEQR.h>
 ```
 
 -Then, setup the sequencer, two begin function are available:
@@ -49,7 +49,7 @@ ADC_SEQR::begin();
 ```
 void setup(){
 	Serial.begin(9600);
-	ADC_SEQR::begin();
+	Adc_Seqr::begin();
 }
 ```
 
@@ -58,7 +58,7 @@ void setup(){
 ```
 void setup(){
 	Serial.begin(9600);
-	ADC_SEQR::begin(A0, 8, 4, A6, INTERNAL_TEMP);
+	Adc_Seqr::begin(A0, 8, 4, A6, INTERNAL_TEMP);
 //other configs to come befor closing setup
 ```
 
@@ -89,6 +89,6 @@ void setup(){
  
  -disale and re-enable the sequencer
  ```
- ADC::SEQR::disable();
- ADC::SEQR::enable();
+ Adc_Seqr::disable();
+ Adc_Seqr::enable();
  ```
