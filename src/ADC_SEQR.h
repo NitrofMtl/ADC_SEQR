@@ -17,10 +17,9 @@ static void enableChX(uint8_t pin){ if(pin==52) pin==14; else if(pin>=A0) pin-=A
 														//shift analog pin to int 								ignore input bigger than reggister
 
 template<typename Pin, typename ... PinX>
-static void enableChX(Pin pin, PinX ... pinX) { enableChX(pin); enableChX(pinX...); };
+static void enableChX(Pin pin, PinX ... pinX) { enableChX((uint8_t)pin); enableChX((uint8_t)pinX...); };
 
 
-  
 class Adc_Seqr  {
 public:
 	static void begin();
@@ -32,11 +31,12 @@ public:
 	static void printSetup();
 	static void enable();
 	static void disable();
+	static uint32_t ADC_sampleRate();
 
 	private:
 
 	static uint8_t NUM_CHANNELS; //number of analog channel active
-	const static uint8_t MAX_NUM_CHANNELS = 14;
+	static const uint8_t MAX_NUM_CHANNELS = 14;
 	static volatile uint16_t global_ADCounts_Array[MAX_NUM_CHANNELS];  // holds the raw data from the analog to digital	
 		
 	static void init();
@@ -47,6 +47,7 @@ public:
 };
 
 float internalTemp();
+
 
 #else
   #error "No SAM3x (arduino DUE) achitechture detected !!!"

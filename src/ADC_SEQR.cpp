@@ -70,8 +70,6 @@ void Adc_Seqr::start(){
 }
 
 
-
-
 void Adc_Seqr::begin(){
 	init();
 
@@ -97,6 +95,7 @@ void Adc_Seqr::printSetup(){
 	Serial.print("sequence register2 =       "); Serial.println(REG_ADC_SEQR2, HEX);
 	Serial.print("interrupts =               "); Serial.println(REG_ADC_IMR, HEX);
 	Serial.print("ADC Clock KHz =            "); Serial.println(adc_clk);
+	Serial.print("ADC sample rate KHz=       "); Serial.println(double(ADC_sampleRate())/1000);
 }
 
 uint16_t Adc_Seqr::read(uint8_t pin){
@@ -178,10 +177,17 @@ void ADC_Handler(){
     Adc_Seqr::ADCHandler();
 }
 
-//ADCClock = MCK / ( (PRESCAL+1) * 2 )
+uint32_t Adc_Seqr::ADC_sampleRate(){
+	uint32_t prescaler = (ADC->ADC_MR & 0xff00) >> 8;
+	double period = NUM_CHANNELS * prescaler / 2;
+	return 1/ (period/1000000);
+}
+
 
 float internalTemp() { // convert the sam3x internal sensor temp
 	if ( !(ADC->ADC_CHSR & 1<<15) ) return 0;  // return 0 if internal temps ch is disable
 	float l_vol = Adc_Seqr::read(INTERNAL_TEMP) * 3300 / 4095;
 	return (float)(l_vol-800) * 0.37736 +25.5; //  <-- the last ofset can e calirated  TODO: find method...
 }
+
+
