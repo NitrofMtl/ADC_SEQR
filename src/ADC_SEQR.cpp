@@ -22,36 +22,26 @@ FREERUN 	FWUP  SLEEP   LOWRES  TRGSEL  TRGEN
 
 void Adc_Seqr::init(){
 	pmc_enable_periph_clk(ID_ADC);   //power management controller told to turn on adc
-	ADC->ADC_CR |=1; //reset the adc
-	ADC->ADC_MR = 0x9038FF00;  //default setting for  ADC_MR register :
-	//USEQ = 1;
-	//TRANSFER = 1;
-	//TRACKTIM = 0;
-	//ANACH = 0;
-	//SETTLING = 3;
-	//STARTUP = 8;
-	//PRESCAL = 255;
-	//FREERUN = 0;
-	//FWUP = 0;
-	//SLEEP = 0;
-	//LOWRES = 0;
-	//TRGSEL = 0;
-	//TRGEN = 0;
-
-	ADC->ADC_CHDR=0xFFFFFFFF;   // disable all channels
+	ADC->ADC_CR |= ADC_CR_SWRST; //reset the adc
+	//ADC->ADC_MR = 0x9038FF00;  //default setting for  ADC_MR register :
+	ADC->ADC_MR = 0; //reset register
+	ADC->ADC_MR |= ADC_MR_USEQ;
+	ADC->ADC_MR |= ADC_MR_TRANSFER(1);
+	ADC->ADC_MR |= ADC_MR_SETTLING(3);
+	ADC->ADC_MR |= ADC_MR_STARTUP(8);
+	ADC->ADC_MR |= ADC_MR_PRESCAL(255);
+	ADC->ADC_CHDR = (uint32_t)-1;   // disable all channels
 }
 
 void Adc_Seqr::start(){
 	NUM_CHANNELS = getSettedCh(); //set how namy channel will be on buffer
 
-	ADC->ADC_MR |= 0x80000000;   //USEQ bit set, saying use the sequence
-
 	ADC->ADC_SEQR1 = 0x01234567;  // use A0 to A7 in order into array 
 	ADC->ADC_SEQR2 = 0xfedcba00;      //use A8 to A11, 52 and INTERNAL_TEMP following in order into array
-
 	NVIC_EnableIRQ(ADC_IRQn); // interrupt controller set to enable adc.
-	ADC->ADC_IDR =~ (1<<27); // interrupt disable register, disables all interrupts but ENDRX
-	ADC->ADC_IER = (1<<27);   // interrupt enable register, enables only ENDRX
+	ADC->ADC_IDR = ~ADC_IDR_ENDRX; // interrupt disable register, disables all interrupts but ENDRX
+
+	ADC->ADC_IER = ADC_IDR_ENDRX;   // interrupt enable register, enables only ENDRX
  
  // following are the DMA controller registers for this peripheral
  // "receive buffer address" 
@@ -63,9 +53,9 @@ void Adc_Seqr::start(){
 	// and "next count"
 	ADC->ADC_RNCR = NUM_CHANNELS;   //  and next counter is set
 	// "transmit control register"
-	ADC->ADC_PTCR = 1;  // transfer control register for the DMA is set to enable receiver channel requests
+	ADC->ADC_PTCR = ADC_PTCR_RXTEN;  // transfer control register for the DMA is set to enable receiver channel requests ///   ---->> to disable    ADC_PTCR_RXTDIS
 	// now that all things are set up, it is safe to start the ADC.....
-	ADC->ADC_MR |= 0x80; // mode register of adc bit seven, free run, set to free running. starts ADC
+	ADC->ADC_MR |= ADC_MR_FREERUN;//0x80; // mode register of adc bit seven, free run, set to free running. starts ADC
 	delay(100); //for stability
 }
 
@@ -149,27 +139,32 @@ uint8_t Adc_Seqr::getArrayPos( uint8_t pin ) {
   return pos; 
 }
 
-void Adc_Seqr::ADCHandler(){     // for the ATOD: re-initialize DMA pointers and count	
-	int f=ADC->ADC_ISR;  //   read the interrupt status register 
-	if (f & (1<<27)){ /// check the bit "endrx"  in the status register
+void Adc_Seqr::ADCHandler() {     // for the ATOD: re-initialize DMA pointers and count	
+	//   read the interrupt status register 
+	if (ADC->ADC_ISR & ADC_IDR_ENDRX){ /// check the bit "endrx"  in the status register
 	/// set up the "next pointer register" 
 	ADC->ADC_RNPR =(uint32_t)global_ADCounts_Array;  // "receive next pointer" register set to global_ADCounts_Array 
 	// set up the "next count"
 	ADC->ADC_RNCR = NUM_CHANNELS;  // "receive next" counter set to 14 <-- to do find how thuius works
- }
+	}
 }
 
-void Adc_Seqr::prescaler(uint32_t prsc){
-	ADC->ADC_MR &= 0xFFFF00FF;   //mode register "prescale" zeroed out. 
-	ADC->ADC_MR |= prsc << 8;  //setup the prescale frequency
+void Adc_Seqr::prescaler(uint32_t prsc) {
+	ADC->ADC_MR &= ~ADC_MR_PRESCAL((uint8_t)-1);   //mode register "prescale" zeroed out. 
+	ADC->ADC_MR |= ADC_MR_PRESCAL(prsc);  //setup the prescale frequency
+}
+
+void Adc_Seqr::setTracktim(uint8_t tracktim) {
+	ADC->ADC_MR &= ~ADC_MR_TRACKTIM(0xF);
+	ADC->ADC_MR |= ADC_MR_TRACKTIM(tracktim);
 }
 
 void Adc_Seqr::enable(){
-	ADC->ADC_MR |= 0x80000000; //turn on bit 32, sequencer enable
+	ADC->ADC_MR |= ADC_MR_FREERUN;
 }
 
 void Adc_Seqr::disable(){
-	ADC->ADC_MR &= 0x7FFFFFFF; //turn off bit 32, sequencer disable
+	ADC->ADC_MR &= ~ADC_MR_FREERUN;
 }
 
   //interrupt handler
@@ -178,7 +173,7 @@ void ADC_Handler(){
 }
 
 uint32_t Adc_Seqr::ADC_sampleRate(){
-	uint32_t prescaler = (ADC->ADC_MR & 0xff00) >> 8;
+	uint32_t prescaler = ( ADC->ADC_MR & ADC_MR_PRESCAL((uint32_t)-1) ) >> 8;
 	double period = NUM_CHANNELS * prescaler / 2;
 	return 1/ (period/1000000);
 }

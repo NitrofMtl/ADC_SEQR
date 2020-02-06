@@ -6,6 +6,13 @@
 #elif defined(ARDUINO_ARCH_SAM)
   // SAM-specific code
 
+#define BIT_FIELD(field)   0xFFFFFFFF >> (32-field)
+#define ADC_MR_TRANSFER(x) ( x & BIT_FIELD(2) ) << 28
+#define ADC_MR_TRACKTIM(x) ( x & BIT_FIELD(4) ) << 24
+#define ADC_MR_SETTLING(x) ( x & BIT_FIELD(2) ) << 20
+#define ADC_MR_STARTUP(x)  ( x & BIT_FIELD(4) ) << 16
+#define ADC_MR_PRESCAL(x)  ( x & BIT_FIELD(8) ) << 8
+#define ADC_MR_TRGSEL(x)   ( x & BIT_FIELD(3) ) << 1
 
 #define INTERNAL_TEMP 13
 
@@ -14,7 +21,7 @@ class Adc_Seqr;
 
 								//PIN 52 (AD14)    							 Shift 2 bit for the 2 adc channel (8,9)not use in samx       enable internal temp sensor
 static void enableChX(uint8_t pin){ if(pin==52) pin==14; else if(pin>=A0) pin-=A0; else if (pin>7 && pin!=14) pin+=2; if(pin>15) return; if(pin==INTERNAL_TEMP+2) ADC->ADC_ACR |= ADC_ACR_TSON; ADC->ADC_CHER|=(1<<pin); };
-														//shift analog pin to int 								ignore input bigger than reggister
+														//shift analog pin to int 								ignore input bigger than register
 
 template<typename Pin, typename ... PinX>
 static void enableChX(Pin pin, PinX ... pinX) { enableChX((uint8_t)pin); enableChX((uint8_t)pinX...); };
@@ -32,6 +39,7 @@ public:
 	static void enable();
 	static void disable();
 	static uint32_t ADC_sampleRate();
+	static void setTracktim(uint8_t tracktim);
 
 	private:
 

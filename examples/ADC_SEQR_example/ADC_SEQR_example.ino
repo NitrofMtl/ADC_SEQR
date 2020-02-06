@@ -4,14 +4,18 @@
 void setup() {
   Serial.begin(115200);
   Serial.available(); Serial.println();
+  delay(1000);
 //initiate sequencer, have to be before 'analogReadResolution' call to not reset it to 10
-  //Adc_Seqr::begin(); //enable all ADC channels A0 to A11, pin 52 and INTERNAL_TEMP sensor
-  Adc_Seqr::begin(A0, A1, 3, A7, 52, INTERNAL_TEMP); //initialate sequencer on any number of pin needed, A0 to A11, 52 and INTERNAL_TEMP, order do not matter
+  Adc_Seqr::begin(); //enable all ADC channels A0 to A11, pin 52 and INTERNAL_TEMP sensor
+  //Adc_Seqr::begin(A0, A1, 3, A7, 52, INTERNAL_TEMP); //initialate sequencer on any number of pin needed, A0 to A11, 52 and INTERNAL_TEMP, order do not matter
   analogReadResolution(12);
-  Adc_Seqr::prescaler(127);
-
+  //Adc_Seqr::prescaler(127);
+  //Adc_Seqr::setTracktim(15);
+  Adc_Seqr::printSetup();
 }
 
+bool disabled = 0;
+int counter = 0;
 
 void loop() {
   unsigned int reading[12];
@@ -30,6 +34,22 @@ void loop() {
   Serial.print(internalTemp()); 
   Serial.println("celcius");
   printAdcFcy();
+  
+  if (counter > 4) {
+    if (!disabled) {
+      disabled = 1;
+      Adc_Seqr::disable();
+      Serial.println("disable");
+
+    } else {
+      disabled = 0;
+      Adc_Seqr::enable();
+      Serial.println("enable");
+
+    }
+    counter = 0;
+  }
+  counter++;
 
   delay(1000);  
 }
@@ -38,7 +58,6 @@ void loop() {
 
 //estimated frequency
 void printAdcFcy(){
-
   double f = Adc_Seqr::ADC_sampleRate();
   Serial.print("Adc sample frequency: ");
   if (f >= 1000) {
