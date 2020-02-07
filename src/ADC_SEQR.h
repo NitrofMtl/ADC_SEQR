@@ -7,7 +7,7 @@
   // SAM-specific code
 
 #ifndef BIT_FIELD
-#define BIT_FIELD(field)   0xFFFFFFFF >> (32-field)
+#define BIT_FIELD(field)   MAX_FIELD >> (32-field)
 #define MAX_FIELD (uint32_t)-1
 #endif
 
@@ -19,7 +19,6 @@
 #define ADC_MR_STARTUP(x)  ( x & BIT_FIELD(4) ) << 16
 #define ADC_MR_PRESCAL(x)  ( x & BIT_FIELD(8) ) << 8
 #define ADC_MR_TRGSEL(x)   ( x & BIT_FIELD(3) ) << 1
-#define MAX_FIELD (uint32_t)-1
 #endif
 
 #define INTERNAL_TEMP 13
