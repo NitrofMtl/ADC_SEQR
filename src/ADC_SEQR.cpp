@@ -3,7 +3,7 @@
 
   
 volatile uint16_t Adc_Seqr::global_ADCounts_Array[] = {0};
-uint8_t Adc_Seqr::NUM_CHANNELS = 14;
+uint8_t Adc_Seqr::numChannels = 14;
 
 /*SAM3X ADC_MR Register, refer to data sheet:43.7.2 ADC Mode Register 
 
@@ -23,18 +23,18 @@ FREERUN 	FWUP  SLEEP   LOWRES  TRGSEL  TRGEN
 void Adc_Seqr::init(){
 	pmc_enable_periph_clk(ID_ADC);   //power management controller told to turn on adc
 	ADC->ADC_CR |= ADC_CR_SWRST; //reset the adc
-	//ADC->ADC_MR = 0x9038FF00;  //default setting for  ADC_MR register :
 	ADC->ADC_MR = 0; //reset register
-	ADC->ADC_MR |= ADC_MR_USEQ;
-	ADC->ADC_MR |= ADC_MR_TRANSFER(1);
-	ADC->ADC_MR |= ADC_MR_SETTLING(3);
-	ADC->ADC_MR |= ADC_MR_STARTUP(8);
-	ADC->ADC_MR |= ADC_MR_PRESCAL(255);
-	ADC->ADC_CHDR = (uint32_t)-1;   // disable all channels
+	ADC->ADC_MR |= ADC_MR_USEQ
+				|  ADC_MR_TRANSFER(1)
+				|  ADC_MR_TRACKTIM(15)
+				|  ADC_MR_SETTLING(3)
+				|  ADC_MR_STARTUP(8)
+				|  ADC_MR_PRESCAL(255);
+	ADC->ADC_CHDR = MAX_FIELD;   // disable all channels
 }
 
 void Adc_Seqr::start(){
-	NUM_CHANNELS = getSettedCh(); //set how namy channel will be on buffer
+	numChannels = getSettedCh(); //set how namy channel will be on buffer
 
 	ADC->ADC_SEQR1 = 0x01234567;  // use A0 to A7 in order into array 
 	ADC->ADC_SEQR2 = 0xfedcba00;      //use A8 to A11, 52 and INTERNAL_TEMP following in order into array
@@ -47,11 +47,11 @@ void Adc_Seqr::start(){
  // "receive buffer address" 
 	ADC->ADC_RPR = (uint32_t)global_ADCounts_Array;   // DMA receive pointer register  points to beginning of global_ADCount
 	// "receive count" 
-	ADC->ADC_RCR = NUM_CHANNELS;  //  receive counter set
+	ADC->ADC_RCR = numChannels;  //  receive counter set
 	// "next-buffer address"
 	ADC->ADC_RNPR = (uint32_t)global_ADCounts_Array; // next receive pointer register DMA global_ADCounts_Arrayfer  points to second set of data 
 	// and "next count"
-	ADC->ADC_RNCR = NUM_CHANNELS;   //  and next counter is set
+	ADC->ADC_RNCR = numChannels;   //  and next counter is set
 	// "transmit control register"
 	ADC->ADC_PTCR = ADC_PTCR_RXTEN;  // transfer control register for the DMA is set to enable receiver channel requests ///   ---->> to disable    ADC_PTCR_RXTDIS
 	// now that all things are set up, it is safe to start the ADC.....
@@ -64,28 +64,42 @@ void Adc_Seqr::begin(){
 	init();
 
 	ADC->ADC_ACR |= ADC_ACR_TSON; // enable internal temp sensor
-	ADC->ADC_CHER=0xfcff;//use channels A0 to A11 and pin52 and internal temp sensor
+	//ADC->ADC_CHER=0xfcff;//use channels A0 to A11 and pin52 and internal temp sensor, Only channel 8 & 9 are not use on Sam3x
+	ADC->ADC_CHER  |= ADC_CHER_CH0 
+					| ADC_CHER_CH1 
+					| ADC_CHER_CH2 
+					| ADC_CHER_CH3 
+					| ADC_CHER_CH4 
+					| ADC_CHER_CH5 
+					| ADC_CHER_CH6 
+					| ADC_CHER_CH7
+					| ADC_CHER_CH10 
+					| ADC_CHER_CH11 
+					| ADC_CHER_CH12 
+					| ADC_CHER_CH13 
+					| ADC_CHER_CH14 
+					| ADC_CHER_CH15;
 
 	start();
 }
 
 uint8_t Adc_Seqr::getSettedCh(){ //found how many channel are set
-	uint8_t NUM_CHANNELS = 0;
+	uint8_t numChannels = 0;
 	for (int i = 0; i < 16; i++){
-		if ( ADC->ADC_CHSR & (1<<i) ) NUM_CHANNELS++;
+		if ( ADC->ADC_CHSR & (1<<i) ) numChannels++;
 	}
-	return NUM_CHANNELS;
+	return numChannels;
 }
 
 void Adc_Seqr::printSetup(){
-	uint32_t adc_clk = 84000/ (  ( (( (ADC->ADC_MR & 0xff00)>>8)+1) *2 )  );
+	uint32_t adc_clk = 84000/ (  ( ( (ADC->ADC_MR & ADC_MR_PRESCAL(MAX_FIELD)>>8) +1) *2 ) );
 	Serial.print("mode register =            "); Serial.println(REG_ADC_MR, HEX);
 	Serial.print("channel enabled register = "); Serial.println(REG_ADC_CHSR, BIN);
 	Serial.print("sequence register1 =       "); Serial.println(REG_ADC_SEQR1, HEX);
 	Serial.print("sequence register2 =       "); Serial.println(REG_ADC_SEQR2, HEX);
 	Serial.print("interrupts =               "); Serial.println(REG_ADC_IMR, HEX);
 	Serial.print("ADC Clock KHz =            "); Serial.println(adc_clk);
-	Serial.print("ADC sample rate KHz=       "); Serial.println(double(ADC_sampleRate())/1000);
+	Serial.print("ADC sample rate KHz=       "); Serial.println(ADC_sampleRate()/1000);
 }
 
 uint16_t Adc_Seqr::read(uint8_t pin){
@@ -145,17 +159,17 @@ void Adc_Seqr::ADCHandler() {     // for the ATOD: re-initialize DMA pointers an
 	/// set up the "next pointer register" 
 	ADC->ADC_RNPR =(uint32_t)global_ADCounts_Array;  // "receive next pointer" register set to global_ADCounts_Array 
 	// set up the "next count"
-	ADC->ADC_RNCR = NUM_CHANNELS;  // "receive next" counter set to 14 <-- to do find how thuius works
+	ADC->ADC_RNCR = numChannels;  // "receive next" counter set to 14 <-- to do find how thuius works
 	}
 }
 
 void Adc_Seqr::prescaler(uint32_t prsc) {
-	ADC->ADC_MR &= ~ADC_MR_PRESCAL((uint8_t)-1);   //mode register "prescale" zeroed out. 
+	ADC->ADC_MR &= ~(ADC_MR_PRESCAL(MAX_FIELD));   //mode register "prescale" zeroed out. 
 	ADC->ADC_MR |= ADC_MR_PRESCAL(prsc);  //setup the prescale frequency
 }
 
 void Adc_Seqr::setTracktim(uint8_t tracktim) {
-	ADC->ADC_MR &= ~ADC_MR_TRACKTIM(0xF);
+	ADC->ADC_MR &= ~(ADC_MR_TRACKTIM(MAX_FIELD));
 	ADC->ADC_MR |= ADC_MR_TRACKTIM(tracktim);
 }
 
@@ -173,9 +187,9 @@ void ADC_Handler(){
 }
 
 uint32_t Adc_Seqr::ADC_sampleRate(){
-	uint32_t prescaler = ( ADC->ADC_MR & ADC_MR_PRESCAL((uint32_t)-1) ) >> 8;
-	double period = NUM_CHANNELS * prescaler / 2;
-	return 1/ (period/1000000);
+	uint32_t f2 = 84000000/( ( ( (ADC->ADC_MR &  ADC_MR_PRESCAL(MAX_FIELD)) >>8) +1) *2 );
+	f2 /= CLOCK_CYCLE_PER_CONVERSION;
+	return f2 / getSettedCh();
 }
 
 
