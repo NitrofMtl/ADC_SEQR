@@ -27,9 +27,10 @@ void Adc_Seqr::init(){
 	ADC->ADC_MR |= ADC_MR_USEQ
 				|  ADC_MR_TRANSFER(1)
 				|  ADC_MR_TRACKTIM(15)
-				|  ADC_MR_SETTLING(3)
+				|  ADC_MR_SETTLING(0)
 				|  ADC_MR_STARTUP(8)
-				|  ADC_MR_PRESCAL(255);
+				|  ADC_MR_PRESCAL(255)
+				|  ADC_MR_TRANSFER(3);
 	ADC->ADC_CHDR = MAX_FIELD;   // disable all channels
 }
 
@@ -37,7 +38,7 @@ void Adc_Seqr::start(){
 	numChannels = getSettedCh(); //set how namy channel will be on buffer
 
 	ADC->ADC_SEQR1 = 0x01234567;  // use A0 to A7 in order into array 
-	ADC->ADC_SEQR2 = 0xfedcba00;      //use A8 to A11, 52 and INTERNAL_TEMP following in order into array
+	ADC->ADC_SEQR2 = 0x00fedcba;      //use A8 to A11, 52 and INTERNAL_TEMP following in order into array
 	NVIC_EnableIRQ(ADC_IRQn); // interrupt controller set to enable adc.
 	ADC->ADC_IDR = ~ADC_IDR_ENDRX; // interrupt disable register, disables all interrupts but ENDRX
 
@@ -53,7 +54,7 @@ void Adc_Seqr::start(){
 	// and "next count"
 	ADC->ADC_RNCR = numChannels;   //  and next counter is set
 	// "transmit control register"
-	ADC->ADC_PTCR = ADC_PTCR_RXTEN;  // transfer control register for the DMA is set to enable receiver channel requests ///   ---->> to disable    ADC_PTCR_RXTDIS
+	ADC->ADC_PTCR = ADC_PTCR_RXTEN;  // transfer control register for the DMA is set to enable receiver channel requests
 	// now that all things are set up, it is safe to start the ADC.....
 	ADC->ADC_MR |= ADC_MR_FREERUN;//0x80; // mode register of adc bit seven, free run, set to free running. starts ADC
 	delay(100); //for stability
@@ -64,7 +65,6 @@ void Adc_Seqr::begin(){
 	init();
 
 	ADC->ADC_ACR |= ADC_ACR_TSON; // enable internal temp sensor
-	//ADC->ADC_CHER=0xfcff;//use channels A0 to A11 and pin52 and internal temp sensor, Only channel 8 & 9 are not use on Sam3x
 	ADC->ADC_CHER  |= ADC_CHER_CH0 
 					| ADC_CHER_CH1 
 					| ADC_CHER_CH2 
@@ -73,13 +73,12 @@ void Adc_Seqr::begin(){
 					| ADC_CHER_CH5 
 					| ADC_CHER_CH6 
 					| ADC_CHER_CH7
+					| ADC_CHER_CH8 
+					| ADC_CHER_CH9
 					| ADC_CHER_CH10 
 					| ADC_CHER_CH11 
 					| ADC_CHER_CH12 
-					| ADC_CHER_CH13 
-					| ADC_CHER_CH14 
-					| ADC_CHER_CH15;
-
+					| ADC_CHER_CH13; 
 	start();
 }
 
@@ -134,7 +133,6 @@ uint16_t Adc_Seqr::read(uint8_t pin){
 	}
 
 	uint8_t ch = pin;
-	if ( ch > 7 ) ch+=2;
 	if( !(ADC->ADC_CHSR & (1<<ch)) ) {
 		return 0; //return 0 for disable pin
 	}
@@ -147,19 +145,20 @@ uint16_t Adc_Seqr::read(uint8_t pin){
 uint8_t Adc_Seqr::getArrayPos( uint8_t pin ) {
   uint8_t pos = 0;
   for (uint8_t i=0; i<pin; i++){  //loop add a position in buffer for each active pin in ADC_CHSR
-  	if ( i > 7 && ADC->ADC_CHSR & (1<<i+2 ) ) pos++; //shift 2 position in register to match register and array number
-    else if ( ADC->ADC_CHSR & (1<<i) ) pos++; 
+    if ( ADC->ADC_CHSR & (1<<i) ) pos++; 
   }
   return pos; 
 }
 
+
 void Adc_Seqr::ADCHandler() {     // for the ATOD: re-initialize DMA pointers and count	
+	
 	//   read the interrupt status register 
-	if (ADC->ADC_ISR & ADC_IDR_ENDRX){ /// check the bit "endrx"  in the status register
-	/// set up the "next pointer register" 
-	ADC->ADC_RNPR =(uint32_t)global_ADCounts_Array;  // "receive next pointer" register set to global_ADCounts_Array 
-	// set up the "next count"
-	ADC->ADC_RNCR = numChannels;  // "receive next" counter set to 14 <-- to do find how thuius works
+	if (ADC->ADC_ISR & ADC_ISR_ENDRX){ /// check the bit "endrx"  in the status register /// ADC_IDR_ENDRX correction
+		/// set up the "next pointer register" 
+		ADC->ADC_RNPR =(uint32_t)global_ADCounts_Array;  // "receive next pointer" register set to global_ADCounts_Array 
+		// set up the "next count"
+		ADC->ADC_RNCR = numChannels;  // "receive next" counter set to 14 <-- to do find how this works
 	}
 }
 
@@ -194,9 +193,7 @@ uint32_t Adc_Seqr::ADC_sampleRate(){
 
 
 float internalTemp() { // convert the sam3x internal sensor temp
-	if ( !(ADC->ADC_CHSR & 1<<15) ) return 0;  // return 0 if internal temps ch is disable
+	if ( !(ADC->ADC_CHSR & 1<<13) ) return 0;  // return 0 if internal temps ch is disable
 	float l_vol = Adc_Seqr::read(INTERNAL_TEMP) * 3300 / 4095;
 	return (float)(l_vol-800) * 0.37736 +25.5; //  <-- the last ofset can e calirated  TODO: find method...
 }
-
-

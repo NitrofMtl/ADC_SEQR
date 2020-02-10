@@ -8,9 +8,8 @@ void setup() {
 //initiate sequencer, have to be before 'analogReadResolution' call to not reset it to 10
   //Adc_Seqr::begin(); //enable all ADC channels A0 to A11, pin 52 and INTERNAL_TEMP sensor
   Adc_Seqr::begin(A0, A1, 3, A7, 52, INTERNAL_TEMP); //initialate sequencer on any number of pin needed, A0 to A11, 52 and INTERNAL_TEMP, order do not matter
-  analogReadResolution(12);
+  analogReadResolution(12);  //10 or 12, default 12
   Adc_Seqr::prescaler(255);
-  Adc_Seqr::setTracktim(15);
 }
 
 bool disabled = 0;
