@@ -158,7 +158,7 @@ void Adc_Seqr::ADCHandler() {     // for the ATOD: re-initialize DMA pointers an
 		/// set up the "next pointer register" 
 		ADC->ADC_RNPR =(uint32_t)global_ADCounts_Array;  // "receive next pointer" register set to global_ADCounts_Array 
 		// set up the "next count"
-		ADC->ADC_RNCR = numChannels;  // "receive next" counter set to 14 <-- to do find how this works
+		ADC->ADC_RNCR = numChannels;  // "receive next" counter
 	}
 }
 
