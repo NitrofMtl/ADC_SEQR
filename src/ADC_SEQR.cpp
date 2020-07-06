@@ -22,7 +22,7 @@ FREERUN 	FWUP  SLEEP   LOWRES  TRGSEL  TRGEN
 
 void Adc_Seqr::init(){
 	pmc_enable_periph_clk(ID_ADC);   //power management controller told to turn on adc
-	ADC->ADC_CR |= ADC_CR_SWRST; //reset the adc
+	ADC->ADC_CR = ADC_CR_SWRST; //reset the adc
 	ADC->ADC_MR = 0; //reset register
 	ADC->ADC_MR |= ADC_MR_USEQ
 				|  ADC_MR_TRANSFER(1)
@@ -65,7 +65,7 @@ void Adc_Seqr::begin(){
 	init();
 
 	ADC->ADC_ACR |= ADC_ACR_TSON; // enable internal temp sensor
-	ADC->ADC_CHER  |= ADC_CHER_CH0 
+	ADC->ADC_CHER  = ADC_CHER_CH0 
 					| ADC_CHER_CH1 
 					| ADC_CHER_CH2 
 					| ADC_CHER_CH3 
