@@ -195,5 +195,5 @@ uint32_t Adc_Seqr::ADC_sampleRate(){
 float internalTemp() { // convert the sam3x internal sensor temp
 	if ( !(ADC->ADC_CHSR & 1<<13) ) return 0;  // return 0 if internal temps ch is disable
 	float l_vol = Adc_Seqr::read(INTERNAL_TEMP) * 3300 / 4095;
-	return (float)(l_vol-800) * 0.37736 +25.5; //  <-- the last ofset can e calirated  TODO: find method...
+	return (float)(T_vol-800) / 265 + 27.0; //  <-- the last ofset can e calirated  TODO: find method...
 }
