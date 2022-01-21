@@ -1,5 +1,6 @@
 #include <ADC_SEQR.h>
 
+void printAdcFcy();
 
 void setup() {
   Serial.begin(115200);
