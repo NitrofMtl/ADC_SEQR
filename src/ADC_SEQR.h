@@ -1,78 +1,88 @@
 #ifndef ADC_SEQR_h
 #define ADC_SEQR_h
 
-#if defined(ARDUINO_ARCH_AVR)
+#ifndef ARDUINO_ARCH_SAM
   	#error "This libraries is for arduino DUE only !!!"
-#elif defined(ARDUINO_ARCH_SAM)
+#else
   // SAM-specific code
 
-#define MAX_NUM_CHANNELS 14
+#define ADC_MR_PRESCALER_VALUE ((ADC->ADC_MR & ADC_MR_PRESCAL_Msk ) >> ADC_MR_PRESCAL_Pos)
+#define ADC_MR_STARTUP_VALUE (( ADC->ADC_MR & ADC_MR_STARTUP_Msk )  >> ADC_MR_STARTUP_Pos)
+#define ADC_MR_TRANSFER_VALUE (( ADC->ADC_MR & ADC_MR_TRANSFER_Msk ) >> ADC_MR_TRANSFER_Pos)
+#define ADC_MR_TRACKTIM_VALUE (( ADC->ADC_MR & ADC_MR_TRACKTIM_Msk ) >> ADC_MR_TRACKTIM_Pos)
 
-#ifndef BIT_FIELD
-#define BIT_FIELD(field)   MAX_FIELD >> (32-field)
-#define MAX_FIELD (uint32_t)-1
-#endif
+#define ADC_MR_PRESCALER_MAX 255
+#define ADC_MR_STARTUP_MAX   ADC_MR_STARTUP_SUT960
+#define ADC_MR_TRANSFER_MAX  3
+#define ADC_MR_TRACKTIM_MAX  15
 
-#ifndef ADC_MR_FIELD
-#define ADC_MR_FIELD
-//#define ADC_MR_TRANSFER(x) ( x & BIT_FIELD(2) ) << 28
-//#define ADC_MR_TRACKTIM(x) ( x & BIT_FIELD(4) ) << 24
-#define ADC_MR_SETTLING(x) ( x & BIT_FIELD(2) ) << 20
-#define ADC_MR_STARTUP(x)  ( x & BIT_FIELD(4) ) << 16
-//#define ADC_MR_PRESCAL(x)  ( x & BIT_FIELD(8) ) << 8
-#define ADC_MR_TRGSEL(x)   ( x & BIT_FIELD(3) ) << 1
-#endif
+#define ADC_MR_PRESCALER_SET 100
+#define ADC_MR_STARTUP_SET   ADC_MR_STARTUP_MAX
+#define ADC_MR_TRANSFER_SET  ADC_MR_TRANSFER_MAX
+#define ADC_MR_TRACKTIM_SET  ADC_MR_TRACKTIM_MAX
 
-#define INTERNAL_TEMP 13
+#define GLOBAL_ARRAY_SIZE 16
+#define ALL_ANALOG_CHANNEL A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11
+#define SEQR1_PIN_SEQUENCE 0x01234567
+#define SEQR2_PIN_SEQUENCE 0xfedcba98
+#define INTERNAL_TEMP 15
+#define PIN52_Pos 14
+#define INTERNAL_TEMP_OFFSET 27
+#define INTERNAL_MV_OFFSET 800
+#define INTERNAL_TEMP_MV_PER_C 2.65f
+#define CLOCK_CYCLE_PER_CONVERSION 21//20 table 45-30 p.1403  ?? but tested 21 on micros()
 
-#define CLOCK_CYCLE_PER_CONVERSION 20
+class Adc_SeqrClass;													 								
 
-								  							        
-static void enableChX(uint8_t pin){ 
-	if(pin==52) pin=12; //PIN 52 (AD14)  
-	else if(pin>=A0) pin-=A0;  //shift analog pin to int
-	if(pin>13) return;  //ignore input bigger than register
-	if(pin==INTERNAL_TEMP) ADC->ADC_ACR |= ADC_ACR_TSON; //enable internal temp sensor
-	ADC->ADC_CHER|=(1<<pin);
-};
-														 								
+static void enableChX(int8_t pin);
 
 template<typename Pin, typename ... PinX>
-static void enableChX(Pin pin, PinX ... pinX) { enableChX((uint8_t)pin); enableChX((uint8_t)pinX...); };
+static void enableChX(Pin pin, PinX ... pinX);
 
 
-class Adc_Seqr  {
+class Adc_SeqrClass  {
 public:
 	static void begin();
+	static void begin(int8_t pin) { init(); enableChX(pin); start(); };
 	template<typename ... PinX>
-	static void begin(PinX ... pinX){ init(); enableChX(pinX...); start(); };
+	static void begin(int8_t pin, PinX ... pinX){ init(); enableChX(pin, pinX...); start(); };
+
 	static void ADCHandler();
-	static uint16_t read(uint8_t pin);
+	static int16_t read(int8_t pin);
 	static void prescaler(uint32_t prsc);
 	static void printSetup();
 	static void enable();
 	static void disable();
-	static uint32_t ADC_sampleRate();
+	static float ADC_sampleRate();
+	static void setFrequency(float f);
 	static void setTracktim(uint8_t tracktim);
 
 	private:
 	static uint8_t numChannels; //number of analog channel active
-	static volatile uint16_t global_ADCounts_Array[MAX_NUM_CHANNELS];  // holds the raw data from the analog to digital	
-		
+	static volatile uint16_t global_ADCounts_Array[GLOBAL_ARRAY_SIZE];  // holds the raw data from the analog to digital	
 	static void init();
 	static void start();
-
-	static uint8_t getArrayPos( uint8_t pin = 0 );
-	static uint8_t getSettedCh();
+	static int8_t analogPinToChannelPos(int8_t pin);
+	static uint8_t getArrayPos( uint8_t pin );
+	static uint8_t getEnabledChNum();
+	static uint32_t ADC_Startup_Clk();	
+	static uint32_t ADC_Tracktim_Clk();
+	static uint32_t ADC_Clock_f();
+	static uint32_t ADC_Transfer_Clk();
+	friend void enableChX(int8_t pin);
 };
+
+static void enableChX(int8_t pin){ 
+	if(pin==INTERNAL_TEMP) ADC->ADC_ACR |= ADC_ACR_TSON; //enable internal temp sensor
+	ADC->ADC_CHER|=(1<<Adc_SeqrClass::analogPinToChannelPos(pin));
+};
+
+template<typename Pin, typename ... PinX>
+static void enableChX(Pin pin, PinX ... pinX) { enableChX((int8_t)pin); enableChX((int8_t)pinX...); };
 
 float internalTemp();
 
+extern Adc_SeqrClass Adc_Seqr;
 
-#else
-  #error "No SAM3x (arduino DUE) achitechture detected !!!"
-#endif
-	
-#endif
-
-
+#endif //ARDUINO_ARCH_SAM
+#endif //ADC_SEQR_h
